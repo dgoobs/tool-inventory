@@ -4,7 +4,8 @@
 # Requires deploy/startup-script.sh to exist (run deploy/build.sh first).
 #
 # Usage:
-#   SHOP_PASSWORD='choose-a-password' ./deploy/gcp-deploy.sh
+#   SHOP_PASSWORD='choose-a-password' ADMIN_PASSWORD='choose-another' ./deploy/gcp-deploy.sh
+# ADMIN_PASSWORD is optional -- without it, nobody gets manual-override access.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,6 +17,7 @@ FIREWALL_NAME="allow-tool-inventory"
 IP_NAME="tool-inventory-ip"
 
 : "${SHOP_PASSWORD:?Set SHOP_PASSWORD, e.g. SHOP_PASSWORD='yourpassword' ./deploy/gcp-deploy.sh}"
+: "${ADMIN_PASSWORD:=}"
 
 gcloud config set project "$PROJECT_ID"
 gcloud services enable compute.googleapis.com
@@ -41,7 +43,7 @@ gcloud compute instances create "$INSTANCE_NAME" \
   --tags=tool-inventory \
   --address="$STATIC_IP" \
   --metadata-from-file=startup-script=deploy/startup-script.sh \
-  --metadata=shop-password="$SHOP_PASSWORD"
+  --metadata=shop-password="$SHOP_PASSWORD",admin-password="$ADMIN_PASSWORD"
 
 echo ""
 echo "Created. The app takes ~1-2 minutes to install and start after the VM boots."

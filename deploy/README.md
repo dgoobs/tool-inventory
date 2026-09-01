@@ -10,14 +10,19 @@ survives reboots and redeploys.
 1. **GCP project + billing** — needs a project with a billing account
    linked (Console → Billing). The always-free tier covers this VM, but
    billing still has to be on file.
-2. **Pick a shop password** — this gates the whole app (one shared
-   password, no individual accounts).
+2. **Pick a shop password** (everyday use) and, optionally, an **admin
+   password** (unlocks manual overrides on the dashboard — editing or
+   force-checking a tool in/out without scanning its QR tag). Both are
+   shared/no individual accounts; whichever one you type in at login
+   determines the role for that session.
 3. Build the startup script and create the VM:
 
    ```bash
    ./deploy/build.sh
-   SHOP_PASSWORD='choose-a-password' ./deploy/gcp-deploy.sh
+   SHOP_PASSWORD='choose-a-password' ADMIN_PASSWORD='choose-another' ./deploy/gcp-deploy.sh
    ```
+
+   Omit `ADMIN_PASSWORD` if you don't want manual overrides available at all.
 
    This creates a firewall rule (port 8080), a static external IP, and
    the VM itself. The VM installs Python, the app, and starts it via
@@ -37,13 +42,15 @@ This repackages the current code, uploads it to the VM, and reboots it.
 `inventory.db` and the session signing key are left alone — only the
 application code changes.
 
-## Changing the shop password
+## Changing the shop or admin password
 
 ```bash
 gcloud compute instances add-metadata tool-inventory \
-  --zone=us-central1-a --metadata=shop-password='new-password'
+  --zone=us-central1-a --metadata=shop-password='new-password',admin-password='new-admin-password'
 gcloud compute instances reset tool-inventory --zone=us-central1-a
 ```
+
+(Include only the key you're changing if you don't want to touch the other.)
 
 ## Useful commands
 

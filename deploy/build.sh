@@ -33,21 +33,28 @@ fi
 "\$APP_DIR/venv/bin/pip" install -q --upgrade pip
 "\$APP_DIR/venv/bin/pip" install -q -r "\$APP_DIR/requirements.txt"
 
-# SHOP_PASSWORD comes from instance metadata (set/updated without touching code).
-# SECRET_KEY is generated once and persisted so login sessions survive restarts.
+# SHOP_PASSWORD / ADMIN_PASSWORD come from instance metadata (set/updated
+# without touching code). SECRET_KEY is generated once and persisted so
+# login sessions survive restarts.
 ENV_FILE="\$APP_DIR/.env"
 SHOP_PASSWORD_FROM_METADATA=\$(curl -s -H "Metadata-Flavor: Google" \\
   "http://metadata.google.internal/computeMetadata/v1/instance/attributes/shop-password" || true)
+ADMIN_PASSWORD_FROM_METADATA=\$(curl -s -H "Metadata-Flavor: Google" \\
+  "http://metadata.google.internal/computeMetadata/v1/instance/attributes/admin-password" || true)
 
 if [ ! -f "\$ENV_FILE" ]; then
   SECRET_KEY=\$(python3 -c "import secrets; print(secrets.token_hex(32))")
   {
     echo "SECRET_KEY=\$SECRET_KEY"
     echo "SHOP_PASSWORD=\$SHOP_PASSWORD_FROM_METADATA"
+    echo "ADMIN_PASSWORD=\$ADMIN_PASSWORD_FROM_METADATA"
   } > "\$ENV_FILE"
 else
-  sed -i "/^SHOP_PASSWORD=/d" "\$ENV_FILE"
-  echo "SHOP_PASSWORD=\$SHOP_PASSWORD_FROM_METADATA" >> "\$ENV_FILE"
+  sed -i "/^SHOP_PASSWORD=/d;/^ADMIN_PASSWORD=/d" "\$ENV_FILE"
+  {
+    echo "SHOP_PASSWORD=\$SHOP_PASSWORD_FROM_METADATA"
+    echo "ADMIN_PASSWORD=\$ADMIN_PASSWORD_FROM_METADATA"
+  } >> "\$ENV_FILE"
 fi
 
 chown -R www-data:www-data "\$APP_DIR"

@@ -13,6 +13,7 @@
           <th>Van #</th>
           <th>Checked out</th>
           <th>Checked in</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -29,6 +30,7 @@
                 <span class="badge badge-out">Still out</span>
               {% endif %}
             </td>
+            <td>{% if r.is_manual %}<span class="badge badge-admin">Manual</span>{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>

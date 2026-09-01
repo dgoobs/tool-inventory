@@ -8,7 +8,10 @@
 </head>
 <body>
   <header class="no-print">
-    <h1><a href="{{ url_for('dashboard') }}">🔧 Tool Inventory</a></h1>
+    <h1>
+      <a href="{{ url_for('dashboard') }}">🔧 Tool Inventory</a>
+      {% if config.SHOP_PASSWORD and is_admin %}<span class="badge badge-admin">Admin</span>{% endif %}
+    </h1>
     {% if session.get('authed') or not config.SHOP_PASSWORD %}
       <nav>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>

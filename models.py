@@ -38,3 +38,6 @@ class CheckoutRecord(db.Model):
     van_number = db.Column(db.String(50), nullable=False)
     checked_out_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     checked_in_at = db.Column(db.DateTime)
+    # True if any part of this record was created/changed by an admin override
+    # (manual check-out/in, or a correction) rather than an actual QR scan.
+    is_manual = db.Column(db.Boolean, nullable=False, default=False)

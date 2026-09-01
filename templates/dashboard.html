@@ -23,7 +23,10 @@
     <a class="{{ 'active' if status_filter == 'checked_out' }}" href="{{ url_for('dashboard', status='checked_out') }}">Checked out</a>
   </div>
 
-  <p class="muted">Check tools in/out by scanning their QR tag. This dashboard is status only &mdash; <a href="{{ url_for('qr_codes') }}">view/print QR codes</a>.</p>
+  <p class="muted">
+    Check tools in/out by scanning their QR tag &mdash; <a href="{{ url_for('qr_codes') }}">view/print QR codes</a>.
+    {% if is_admin %}Admin mode: manual overrides are available below.{% endif %}
+  </p>
 
   {% if not categories %}
     <p class="empty">No tools match this filter.</p>
@@ -62,6 +65,19 @@
               <td>{{ tool.checked_out_at.strftime("%b %d, %I:%M %p") if tool.checked_out_at else "—" }}</td>
               <td class="actions">
                 <a class="btn btn-qr" href="{{ url_for('tool_qr', tool_id=tool.id) }}">QR code</a>
+                {% if is_admin %}
+                  {% if tool.status == 'in_shop' %}
+                    <a class="btn btn-admin" href="{{ url_for('manual_checkout', tool_id=tool.id) }}">Manual check-out</a>
+                  {% else %}
+                    <a class="btn btn-admin" href="{{ url_for('edit_checkout', tool_id=tool.id) }}">Edit</a>
+                    <form method="post" action="{{ url_for('manual_checkin', tool_id=tool.id) }}">
+                      <button class="btn btn-admin" type="submit"
+                        onclick="return confirm('Manually check in {{ tool.label|e }} without scanning its QR tag?');">
+                        Manual check-in
+                      </button>
+                    </form>
+                  {% endif %}
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

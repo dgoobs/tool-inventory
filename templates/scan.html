@@ -3,18 +3,25 @@
 {% block content %}
   <h2>{{ tool.label }}</h2>
 
+  {% if manual %}
+    <p class="flash flash-error">Admin manual override &mdash; this bypasses QR scanning.</p>
+  {% endif %}
+
   {% if tool.status == 'in_shop' %}
     <p><span class="badge badge-in">In shop</span></p>
     <p class="muted">Scan again after handing this over.</p>
     <form method="post" class="form-card">
       <label for="employee_name">Employee name</label>
-      <input list="employee-list" id="employee_name" name="employee_name" autocomplete="off" required autofocus>
+      <input list="employee-list" id="employee_name" name="employee_name" autocomplete="off"
+             maxlength="10" required autofocus>
       <datalist id="employee-list">
         {% for name in employees %}<option value="{{ name }}">{% endfor %}
       </datalist>
 
       <label for="van_number">Van number</label>
-      <input list="van-list" id="van_number" name="van_number" autocomplete="off" required>
+      <input list="van-list" id="van_number" name="van_number" autocomplete="off"
+             inputmode="numeric" pattern="[0-9]{1,3}" maxlength="3"
+             title="Up to 3 digits, numbers only" required>
       <datalist id="van-list">
         {% for van in vans %}<option value="{{ van }}">{% endfor %}
       </datalist>
