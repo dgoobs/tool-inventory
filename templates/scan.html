@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.label }}{% endblock %}
+{% block content %}
+  <h2>{{ tool.label }}</h2>
+
+  {% if tool.status == 'in_shop' %}
+    <p><span class="badge badge-in">In shop</span></p>
+    <p class="muted">Scan again after handing this over.</p>
+    <form method="post" class="form-card">
+      <label for="employee_name">Employee name</label>
+      <input list="employee-list" id="employee_name" name="employee_name" autocomplete="off" required autofocus>
+      <datalist id="employee-list">
+        {% for name in employees %}<option value="{{ name }}">{% endfor %}
+      </datalist>
+
+      <label for="van_number">Van number</label>
+      <input list="van-list" id="van_number" name="van_number" autocomplete="off" required>
+      <datalist id="van-list">
+        {% for van in vans %}<option value="{{ van }}">{% endfor %}
+      </datalist>
+
+      <div class="form-actions">
+        <button class="btn btn-out" type="submit">Check out {{ tool.label }}</button>
+      </div>
+    </form>
+  {% else %}
+    <p><span class="badge badge-out">Checked out</span></p>
+    <p>With <strong>{{ tool.current_employee }}</strong> &mdash; Van {{ tool.current_van }}</p>
+    <p class="muted">Since {{ tool.checked_out_at.strftime("%b %d, %I:%M %p") if tool.checked_out_at else "" }}</p>
+    <form method="post" class="form-card">
+      <div class="form-actions">
+        <button class="btn btn-in" type="submit">Check in {{ tool.label }}</button>
+      </div>
+    </form>
+  {% endif %}
+
+  <p class="no-print"><a href="{{ url_for('dashboard') }}">&larr; Dashboard</a></p>
+{% endblock %}

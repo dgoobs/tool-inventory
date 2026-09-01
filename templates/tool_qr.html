@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}QR: {{ tool.label }}{% endblock %}
+{% block content %}
+  <div class="qr-single">
+    <h2>{{ tool.label }}</h2>
+    <img src="{{ url_for('tool_qr_svg', tool_id=tool.id) }}" alt="QR code for {{ tool.label }}">
+    <p class="muted">{{ tool.category }}</p>
+  </div>
+  <div class="form-actions no-print">
+    <button class="btn btn-in" onclick="window.print()">Print</button>
+    <a href="{{ url_for('dashboard') }}">&larr; Dashboard</a>
+  </div>
+{% endblock %}

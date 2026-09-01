@@ -23,6 +23,8 @@
     <a class="{{ 'active' if status_filter == 'checked_out' }}" href="{{ url_for('dashboard', status='checked_out') }}">Checked out</a>
   </div>
 
+  <p class="muted">Check tools in/out by scanning their QR tag. This dashboard is status only &mdash; <a href="{{ url_for('qr_codes') }}">view/print QR codes</a>.</p>
+
   {% if not categories %}
     <p class="empty">No tools match this filter.</p>
   {% endif %}
@@ -59,13 +61,7 @@
               <td>{{ tool.current_van or "—" }}</td>
               <td>{{ tool.checked_out_at.strftime("%b %d, %I:%M %p") if tool.checked_out_at else "—" }}</td>
               <td class="actions">
-                {% if tool.status == 'in_shop' %}
-                  <a class="btn btn-out" href="{{ url_for('checkout', tool_id=tool.id) }}">Check out</a>
-                {% else %}
-                  <form method="post" action="{{ url_for('checkin', tool_id=tool.id) }}">
-                    <button class="btn btn-in" type="submit">Check in</button>
-                  </form>
-                {% endif %}
+                <a class="btn btn-qr" href="{{ url_for('tool_qr', tool_id=tool.id) }}">QR code</a>
               </td>
             </tr>
           {% endfor %}

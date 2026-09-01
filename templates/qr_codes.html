@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}QR Codes{% endblock %}
+{% block content %}
+  <div class="no-print" style="display:flex; justify-content:space-between; align-items:center;">
+    <h2 style="margin:0;">Tool QR codes</h2>
+    <button class="btn btn-in" onclick="window.print()">Print all</button>
+  </div>
+  <p class="muted no-print">Cut these out and stick one on each tool. Scanning a code opens that tool's check-out/check-in page directly.</p>
+
+  <div class="qr-grid">
+    {% for tool in tools %}
+      <div class="qr-card">
+        <img src="{{ url_for('tool_qr_svg', tool_id=tool.id) }}" alt="QR code for {{ tool.label }}">
+        <div class="qr-card-label">{{ tool.label }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

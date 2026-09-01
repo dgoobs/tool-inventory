@@ -1,10 +1,13 @@
+import io
 import os
 from datetime import datetime
-from functools import wraps
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+import qrcode
+import qrcode.image.svg
+from flask import Flask, Response, flash, redirect, render_template, request, session, url_for
+from sqlalchemy import inspect, text
 
-from models import CheckoutRecord, Tool, db
+from models import CheckoutRecord, Tool, db, generate_qr_token
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -26,6 +29,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        ensure_qr_tokens()
         seed_tools()
 
     register_routes(app)
@@ -39,6 +43,25 @@ def seed_tools():
     for category, count in DEFAULT_TOOLS:
         for i in range(1, count + 1):
             db.session.add(Tool(category=category, label=f"{category} #{i}"))
+    db.session.commit()
+
+
+def ensure_qr_tokens():
+    """Add the qr_token column/index and backfill tokens if this DB predates QR codes."""
+    inspector = inspect(db.engine)
+    if "tool" not in inspector.get_table_names():
+        return  # fresh DB -- db.create_all() above already made the column
+
+    columns = [c["name"] for c in inspector.get_columns("tool")]
+    if "qr_token" not in columns:
+        db.session.execute(text("ALTER TABLE tool ADD COLUMN qr_token VARCHAR(32)"))
+        db.session.commit()
+
+    for tool in Tool.query.filter(Tool.qr_token.is_(None)).all():
+        tool.qr_token = generate_qr_token()
+    db.session.commit()
+
+    db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_tool_qr_token ON tool (qr_token)"))
     db.session.commit()
 
 
@@ -106,61 +129,74 @@ def register_routes(app):
             status_filter=status_filter,
         )
 
-    @app.route("/checkout/<int:tool_id>", methods=["GET", "POST"])
-    def checkout(tool_id):
-        tool = Tool.query.get_or_404(tool_id)
-        if tool.status == "checked_out":
-            flash(f"{tool.label} is already checked out.", "error")
-            return redirect(url_for("dashboard"))
+    @app.route("/t/<token>", methods=["GET", "POST"])
+    def scan(token):
+        """The only place a tool's status can change -- reached by scanning its
+        physical QR tag. There's no dashboard button that does this, so a tool
+        can't be marked checked in (or out) without whoever's doing it actually
+        having the tag in hand."""
+        tool = Tool.query.filter_by(qr_token=token).first_or_404()
 
         if request.method == "POST":
-            employee = request.form.get("employee_name", "").strip()
-            van = request.form.get("van_number", "").strip()
-            if not employee or not van:
-                flash("Employee name and van number are both required.", "error")
-                return render_template("checkout.html", tool=tool, **pick_lists())
+            if tool.status == "in_shop":
+                employee = request.form.get("employee_name", "").strip()
+                van = request.form.get("van_number", "").strip()
+                if not employee or not van:
+                    flash("Employee name and van number are both required.", "error")
+                    return render_template("scan.html", tool=tool, **pick_lists())
 
-            now = datetime.utcnow()
-            tool.status = "checked_out"
-            tool.current_employee = employee
-            tool.current_van = van
-            tool.checked_out_at = now
-            db.session.add(
-                CheckoutRecord(
-                    tool_id=tool.id,
-                    employee_name=employee,
-                    van_number=van,
-                    checked_out_at=now,
+                now = datetime.utcnow()
+                tool.status = "checked_out"
+                tool.current_employee = employee
+                tool.current_van = van
+                tool.checked_out_at = now
+                db.session.add(
+                    CheckoutRecord(
+                        tool_id=tool.id,
+                        employee_name=employee,
+                        van_number=van,
+                        checked_out_at=now,
+                    )
                 )
-            )
-            db.session.commit()
-            flash(f"{tool.label} checked out to {employee} (Van {van}).", "success")
-            return redirect(url_for("dashboard"))
+                db.session.commit()
+                flash(f"{tool.label} checked out to {employee} (Van {van}).", "success")
+            else:
+                open_record = (
+                    CheckoutRecord.query.filter_by(tool_id=tool.id, checked_in_at=None)
+                    .order_by(CheckoutRecord.checked_out_at.desc())
+                    .first()
+                )
+                if open_record:
+                    open_record.checked_in_at = datetime.utcnow()
 
-        return render_template("checkout.html", tool=tool, **pick_lists())
+                tool.status = "in_shop"
+                tool.current_employee = None
+                tool.current_van = None
+                tool.checked_out_at = None
+                db.session.commit()
+                flash(f"{tool.label} checked back in.", "success")
 
-    @app.route("/checkin/<int:tool_id>", methods=["POST"])
-    def checkin(tool_id):
+            return redirect(url_for("scan", token=token))
+
+        return render_template("scan.html", tool=tool, **pick_lists())
+
+    @app.route("/tools/<int:tool_id>/qr")
+    def tool_qr(tool_id):
         tool = Tool.query.get_or_404(tool_id)
-        if tool.status == "in_shop":
-            flash(f"{tool.label} is already in the shop.", "error")
-            return redirect(url_for("dashboard"))
+        scan_url = url_for("scan", token=tool.qr_token, _external=True)
+        return render_template("tool_qr.html", tool=tool, scan_url=scan_url)
 
-        open_record = (
-            CheckoutRecord.query.filter_by(tool_id=tool.id, checked_in_at=None)
-            .order_by(CheckoutRecord.checked_out_at.desc())
-            .first()
-        )
-        if open_record:
-            open_record.checked_in_at = datetime.utcnow()
+    @app.route("/tools/<int:tool_id>/qr.svg")
+    def tool_qr_svg(tool_id):
+        tool = Tool.query.get_or_404(tool_id)
+        scan_url = url_for("scan", token=tool.qr_token, _external=True)
+        svg = render_qr_svg(scan_url)
+        return Response(svg, mimetype="image/svg+xml")
 
-        tool.status = "in_shop"
-        tool.current_employee = None
-        tool.current_van = None
-        tool.checked_out_at = None
-        db.session.commit()
-        flash(f"{tool.label} checked back in.", "success")
-        return redirect(url_for("dashboard"))
+    @app.route("/qr")
+    def qr_codes():
+        tools = Tool.query.order_by(Tool.category, Tool.label).all()
+        return render_template("qr_codes.html", tools=tools)
 
     @app.route("/tools/new", methods=["GET", "POST"])
     def new_tool():
@@ -204,6 +240,13 @@ def register_routes(app):
             .all()
         ]
         return {"employees": employees, "vans": vans}
+
+
+def render_qr_svg(data):
+    img = qrcode.make(data, image_factory=qrcode.image.svg.SvgPathImage, box_size=10, border=2)
+    buf = io.BytesIO()
+    img.save(buf)
+    return buf.getvalue().decode("utf-8")
 
 
 app = create_app()

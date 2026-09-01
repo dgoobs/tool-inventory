@@ -1,8 +1,13 @@
+import secrets
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+
+def generate_qr_token():
+    return secrets.token_urlsafe(16)
 
 
 class Tool(db.Model):
@@ -15,6 +20,9 @@ class Tool(db.Model):
     current_employee = db.Column(db.String(120))
     current_van = db.Column(db.String(50))
     checked_out_at = db.Column(db.DateTime)
+    # Random, unguessable -- printed as a QR code on the physical tool. This is the
+    # only way to check a tool in or out, so checking one in requires having its tag.
+    qr_token = db.Column(db.String(32), unique=True, default=generate_qr_token)
 
     def __repr__(self):
         return f"<Tool {self.label}>"

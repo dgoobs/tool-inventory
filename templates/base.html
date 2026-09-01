@@ -7,11 +7,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <header>
+  <header class="no-print">
     <h1><a href="{{ url_for('dashboard') }}">🔧 Tool Inventory</a></h1>
     {% if session.get('authed') or not config.SHOP_PASSWORD %}
       <nav>
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('qr_codes') }}">QR Codes</a>
         <a href="{{ url_for('new_tool') }}">Add Tool</a>
         <a href="{{ url_for('history') }}">History</a>
         {% if config.SHOP_PASSWORD %}<a href="{{ url_for('logout') }}">Log out</a>{% endif %}
@@ -21,7 +22,7 @@
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-      <div class="flashes">
+      <div class="flashes no-print">
         {% for category, message in messages %}
           <div class="flash flash-{{ category }}">{{ message }}</div>
         {% endfor %}

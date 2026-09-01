@@ -185,12 +185,65 @@ th {
 
 .btn-out { background: var(--orange); color: white; }
 .btn-in { background: var(--green); color: white; }
+.btn-qr { background: var(--blue); color: white; }
 
 .actions form { margin: 0; }
 
 .empty {
   color: var(--muted);
   font-style: italic;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.qr-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  break-inside: avoid;
+}
+
+.qr-card img {
+  width: 100%;
+  height: auto;
+}
+
+.qr-card-label {
+  margin-top: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.qr-single {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  max-width: 320px;
+  text-align: center;
+}
+
+.qr-single img {
+  width: 100%;
+  height: auto;
+  margin: 12px 0;
+}
+
+@media print {
+  body { background: white; margin: 0; padding: 0; }
+  .no-print { display: none !important; }
+  main { max-width: none; margin: 0; padding: 0; }
+  .qr-card, .qr-single { border: 1px dashed #999; }
 }
 
 .form-card {
