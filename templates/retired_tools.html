@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Retired Tools{% endblock %}
+{% block content %}
+  <h2>Retired tools</h2>
+  <p class="muted">Out of service &mdash; hidden from the dashboard and QR sheet, but their history is kept.</p>
+
+  {% if not tools %}
+    <p class="empty">No retired tools.</p>
+  {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th>Category</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tool in tools %}
+          <tr>
+            <td>{{ tool.label }}</td>
+            <td>{{ tool.category }}</td>
+            <td class="actions">
+              <a class="btn btn-in" href="{{ url_for('reactivate_tool', tool_id=tool.id) }}">Reactivate</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <p><a href="{{ url_for('dashboard') }}">&larr; Dashboard</a></p>
+{% endblock %}

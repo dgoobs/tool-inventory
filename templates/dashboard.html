@@ -68,6 +68,7 @@
                 {% if is_admin %}
                   {% if tool.status == 'in_shop' %}
                     <a class="btn btn-admin" href="{{ url_for('manual_checkout', tool_id=tool.id) }}">Manual check-out</a>
+                    <a class="btn btn-admin" href="{{ url_for('retire_tool', tool_id=tool.id) }}">Retire</a>
                   {% else %}
                     <a class="btn btn-admin" href="{{ url_for('edit_checkout', tool_id=tool.id) }}">Edit</a>
                     <a class="btn btn-admin" href="{{ url_for('manual_checkin', tool_id=tool.id) }}">Manual check-in</a>

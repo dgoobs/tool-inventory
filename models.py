@@ -23,6 +23,9 @@ class Tool(db.Model):
     # Random, unguessable -- printed as a QR code on the physical tool. This is the
     # only way to check a tool in or out, so checking one in requires having its tag.
     qr_token = db.Column(db.String(32), unique=True, default=generate_qr_token)
+    # False once a tool is retired (taken out of service). Retired tools drop off
+    # the dashboard/QR sheet but keep their row and history for the audit trail.
+    active = db.Column(db.Boolean, nullable=False, default=True)
 
     def __repr__(self):
         return f"<Tool {self.label}>"

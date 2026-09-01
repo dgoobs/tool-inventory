@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Reactivate: {{ tool.label }}{% endblock %}
+{% block content %}
+  <h2>Reactivate {{ tool.label }}?</h2>
+  <p class="flash flash-error">This puts it back into service &mdash; it reappears on the dashboard and QR sheet.</p>
+
+  <form method="post" class="form-card">
+    <label for="admin_password">Admin password</label>
+    <input type="password" id="admin_password" name="admin_password" autocomplete="off" required autofocus>
+
+    <div class="form-actions">
+      <button class="btn btn-in" type="submit">Reactivate {{ tool.label }}</button>
+      <a href="{{ url_for('retired_tools') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

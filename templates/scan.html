@@ -7,7 +7,10 @@
     <p class="flash flash-error">Admin manual override &mdash; this bypasses QR scanning.</p>
   {% endif %}
 
-  {% if tool.status == 'in_shop' %}
+  {% if retired %}
+    <p><span class="badge badge-admin">Retired</span></p>
+    <p class="muted">This tool has been taken out of service and is no longer tracked.</p>
+  {% elif tool.status == 'in_shop' %}
     <p><span class="badge badge-in">In shop</span></p>
     <p class="muted">Scan again after handing this over.</p>
     <form method="post" class="form-card">

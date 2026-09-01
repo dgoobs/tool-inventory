@@ -35,8 +35,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-        ensure_qr_tokens()
-        ensure_manual_column()
+        ensure_schema()
         seed_tools()
 
     register_routes(app)
@@ -53,37 +52,43 @@ def seed_tools():
     db.session.commit()
 
 
-def ensure_qr_tokens():
-    """Add the qr_token column/index and backfill tokens if this DB predates QR codes."""
-    inspector = inspect(db.engine)
-    if "tool" not in inspector.get_table_names():
-        return  # fresh DB -- db.create_all() above already made the column
+def ensure_schema():
+    """Add any columns an older database is missing, and backfill their
+    values -- keeps the app working across every version of the schema
+    without a full migration framework.
 
-    columns = [c["name"] for c in inspector.get_columns("tool")]
-    if "qr_token" not in columns:
-        db.session.execute(text("ALTER TABLE tool ADD COLUMN qr_token VARCHAR(32)"))
+    Every column has to exist BEFORE any ORM query runs: SQLAlchemy's
+    Tool/CheckoutRecord queries select all mapped columns at once, so a
+    single missing one (e.g. a DB that predates this feature) breaks
+    every query against that model, not just the one touching that
+    column. So: add all missing columns via raw SQL first, then do any
+    ORM-based backfill.
+    """
+    inspector = inspect(db.engine)
+
+    if "tool" in inspector.get_table_names():
+        tool_columns = [c["name"] for c in inspector.get_columns("tool")]
+        if "qr_token" not in tool_columns:
+            db.session.execute(text("ALTER TABLE tool ADD COLUMN qr_token VARCHAR(32)"))
+        if "active" not in tool_columns:
+            db.session.execute(text("ALTER TABLE tool ADD COLUMN active BOOLEAN NOT NULL DEFAULT 1"))
         db.session.commit()
 
+    if "checkout_record" in inspector.get_table_names():
+        record_columns = [c["name"] for c in inspector.get_columns("checkout_record")]
+        if "is_manual" not in record_columns:
+            db.session.execute(
+                text("ALTER TABLE checkout_record ADD COLUMN is_manual BOOLEAN NOT NULL DEFAULT 0")
+            )
+        db.session.commit()
+
+    # Every column now exists -- safe to run ORM queries.
     for tool in Tool.query.filter(Tool.qr_token.is_(None)).all():
         tool.qr_token = generate_qr_token()
     db.session.commit()
 
     db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_tool_qr_token ON tool (qr_token)"))
     db.session.commit()
-
-
-def ensure_manual_column():
-    """Add checkout_record.is_manual if this DB predates admin overrides."""
-    inspector = inspect(db.engine)
-    if "checkout_record" not in inspector.get_table_names():
-        return  # fresh DB -- db.create_all() above already made the column
-
-    columns = [c["name"] for c in inspector.get_columns("checkout_record")]
-    if "is_manual" not in columns:
-        db.session.execute(
-            text("ALTER TABLE checkout_record ADD COLUMN is_manual BOOLEAN NOT NULL DEFAULT 0")
-        )
-        db.session.commit()
 
 
 def register_routes(app):
@@ -145,7 +150,7 @@ def register_routes(app):
     @app.route("/")
     def dashboard():
         status_filter = request.args.get("status")  # None | in_shop | checked_out
-        tools = Tool.query.order_by(Tool.category, Tool.label).all()
+        tools = Tool.query.filter_by(active=True).order_by(Tool.category, Tool.label).all()
 
         categories = {}
         for t in tools:
@@ -188,6 +193,9 @@ def register_routes(app):
         can't be marked checked in (or out) without whoever's doing it actually
         having the tag in hand."""
         tool = Tool.query.filter_by(qr_token=token).first_or_404()
+
+        if not tool.active:
+            return render_template("scan.html", tool=tool, retired=True)
 
         if request.method == "POST":
             if tool.status == "in_shop":
@@ -317,8 +325,69 @@ def register_routes(app):
 
     @app.route("/qr")
     def qr_codes():
-        tools = Tool.query.order_by(Tool.category, Tool.label).all()
+        tools = Tool.query.filter_by(active=True).order_by(Tool.category, Tool.label).all()
         return render_template("qr_codes.html", tools=tools)
+
+    @app.route("/tools/<int:tool_id>/retire", methods=["GET", "POST"])
+    def retire_tool(tool_id):
+        """Admin-only: take a tool out of service. It drops off the dashboard
+        and QR sheet but its row and history stick around."""
+        redirect_response = require_admin()
+        if redirect_response:
+            return redirect_response
+
+        tool = Tool.query.get_or_404(tool_id)
+        if tool.status == "checked_out":
+            flash(f"{tool.label} is checked out -- check it in before retiring it.", "error")
+            return redirect(url_for("dashboard"))
+        if not tool.active:
+            flash(f"{tool.label} is already retired.", "error")
+            return redirect(url_for("dashboard"))
+
+        if request.method == "POST":
+            if not check_admin_password(request.form.get("admin_password")):
+                flash("Incorrect admin password.", "error")
+                return render_template("retire_tool.html", tool=tool)
+
+            tool.active = False
+            db.session.commit()
+            flash(f"{tool.label} was retired.", "success")
+            return redirect(url_for("dashboard"))
+
+        return render_template("retire_tool.html", tool=tool)
+
+    @app.route("/tools/<int:tool_id>/reactivate", methods=["GET", "POST"])
+    def reactivate_tool(tool_id):
+        """Admin-only: bring a retired tool back into service."""
+        redirect_response = require_admin()
+        if redirect_response:
+            return redirect_response
+
+        tool = Tool.query.get_or_404(tool_id)
+        if tool.active:
+            flash(f"{tool.label} is already active.", "error")
+            return redirect(url_for("retired_tools"))
+
+        if request.method == "POST":
+            if not check_admin_password(request.form.get("admin_password")):
+                flash("Incorrect admin password.", "error")
+                return render_template("reactivate_tool.html", tool=tool)
+
+            tool.active = True
+            db.session.commit()
+            flash(f"{tool.label} was reactivated.", "success")
+            return redirect(url_for("dashboard"))
+
+        return render_template("reactivate_tool.html", tool=tool)
+
+    @app.route("/tools/retired")
+    def retired_tools():
+        redirect_response = require_admin()
+        if redirect_response:
+            return redirect_response
+
+        tools = Tool.query.filter_by(active=False).order_by(Tool.category, Tool.label).all()
+        return render_template("retired_tools.html", tools=tools)
 
     @app.route("/tools/new", methods=["GET", "POST"])
     def new_tool():
