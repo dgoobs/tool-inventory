@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+  <h2>Checkout history</h2>
+  {% if not records %}
+    <p class="empty">No checkouts recorded yet.</p>
+  {% else %}
+    <table>
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th>Employee</th>
+          <th>Van #</th>
+          <th>Checked out</th>
+          <th>Checked in</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+          <tr>
+            <td>{{ r.tool.label }}</td>
+            <td>{{ r.employee_name }}</td>
+            <td>{{ r.van_number }}</td>
+            <td>{{ r.checked_out_at.strftime("%b %d, %Y %I:%M %p") }}</td>
+            <td>
+              {% if r.checked_in_at %}
+                {{ r.checked_in_at.strftime("%b %d, %Y %I:%M %p") }}
+              {% else %}
+                <span class="badge badge-out">Still out</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

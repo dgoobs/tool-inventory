@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+  <section class="totals">
+    <div class="stat">
+      <span class="stat-num">{{ totals.total }}</span>
+      <span class="stat-label">Total tools</span>
+    </div>
+    <div class="stat stat-in">
+      <span class="stat-num">{{ totals.in_shop }}</span>
+      <span class="stat-label">In shop</span>
+    </div>
+    <div class="stat stat-out">
+      <span class="stat-num">{{ totals.checked_out }}</span>
+      <span class="stat-label">Checked out</span>
+    </div>
+  </section>
+
+  <div class="filters">
+    <a class="{{ 'active' if not status_filter }}" href="{{ url_for('dashboard') }}">All</a>
+    <a class="{{ 'active' if status_filter == 'in_shop' }}" href="{{ url_for('dashboard', status='in_shop') }}">In shop</a>
+    <a class="{{ 'active' if status_filter == 'checked_out' }}" href="{{ url_for('dashboard', status='checked_out') }}">Checked out</a>
+  </div>
+
+  {% if not categories %}
+    <p class="empty">No tools match this filter.</p>
+  {% endif %}
+
+  {% for category, tools in categories.items() %}
+    <section class="category">
+      <h2>
+        {{ category }}
+        <span class="category-count">{{ summary[category].in_shop }} in shop / {{ summary[category].checked_out }} out of {{ summary[category].total }}</span>
+      </h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Status</th>
+            <th>Employee</th>
+            <th>Van #</th>
+            <th>Checked out</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tool in tools %}
+            <tr>
+              <td>{{ tool.label }}</td>
+              <td>
+                {% if tool.status == 'in_shop' %}
+                  <span class="badge badge-in">In shop</span>
+                {% else %}
+                  <span class="badge badge-out">Checked out</span>
+                {% endif %}
+              </td>
+              <td>{{ tool.current_employee or "—" }}</td>
+              <td>{{ tool.current_van or "—" }}</td>
+              <td>{{ tool.checked_out_at.strftime("%b %d, %I:%M %p") if tool.checked_out_at else "—" }}</td>
+              <td class="actions">
+                {% if tool.status == 'in_shop' %}
+                  <a class="btn btn-out" href="{{ url_for('checkout', tool_id=tool.id) }}">Check out</a>
+                {% else %}
+                  <form method="post" action="{{ url_for('checkin', tool_id=tool.id) }}">
+                    <button class="btn btn-in" type="submit">Check in</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  {% endfor %}
+
+{% endblock %}

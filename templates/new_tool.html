@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Add Tool{% endblock %}
+{% block content %}
+  <h2>Add a new tool</h2>
+  <form method="post" class="form-card">
+    <label for="category">Category</label>
+    <input list="category-list" id="category" name="category" autocomplete="off" required autofocus placeholder="e.g. Grinder">
+    <datalist id="category-list">
+      {% for cat in categories %}<option value="{{ cat }}">{% endfor %}
+    </datalist>
+
+    <label for="label">Tool name / label</label>
+    <input id="label" name="label" autocomplete="off" required placeholder="e.g. Grinder #11">
+
+    <div class="form-actions">
+      <button class="btn btn-in" type="submit">Add tool</button>
+      <a href="{{ url_for('dashboard') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}

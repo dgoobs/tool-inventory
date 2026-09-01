@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Check out {{ tool.label }}{% endblock %}
+{% block content %}
+  <h2>Check out: {{ tool.label }}</h2>
+  <form method="post" class="form-card">
+    <label for="employee_name">Employee name</label>
+    <input list="employee-list" id="employee_name" name="employee_name" autocomplete="off" required autofocus>
+    <datalist id="employee-list">
+      {% for name in employees %}<option value="{{ name }}">{% endfor %}
+    </datalist>
+
+    <label for="van_number">Van number</label>
+    <input list="van-list" id="van_number" name="van_number" autocomplete="off" required>
+    <datalist id="van-list">
+      {% for van in vans %}<option value="{{ van }}">{% endfor %}
+    </datalist>
+
+    <div class="form-actions">
+      <button class="btn btn-out" type="submit">Check out {{ tool.label }}</button>
+      <a href="{{ url_for('dashboard') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
