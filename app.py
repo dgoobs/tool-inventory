@@ -213,7 +213,7 @@ def register_routes(app):
                 flash(f"Added {label}.", "success")
                 return redirect(url_for("dashboard"))
 
-        categories = sorted({t.category for t, in db.session.query(Tool.category).distinct()})
+        categories = sorted({row[0] for row in db.session.query(Tool.category).distinct()})
         return render_template("new_tool.html", categories=categories)
 
     @app.route("/history")
