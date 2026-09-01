@@ -20,6 +20,9 @@
       {% for van in vans %}<option value="{{ van }}">{% endfor %}
     </datalist>
 
+    <label for="admin_password">Admin password</label>
+    <input type="password" id="admin_password" name="admin_password" autocomplete="off" required>
+
     <div class="form-actions">
       <button class="btn btn-in" type="submit">Save</button>
       <a href="{{ url_for('dashboard') }}">Cancel</a>

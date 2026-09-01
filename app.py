@@ -111,6 +111,14 @@ def register_routes(app):
             return redirect(url_for("dashboard"))
         return None
 
+    def check_admin_password(submitted):
+        """Re-verifies the admin password for a specific override action, on
+        top of the admin session gate -- so a tablet left logged in as admin
+        still can't have its manual-override buttons pressed by anyone who
+        doesn't know the password."""
+        admin_password = app.config["ADMIN_PASSWORD"]
+        return bool(admin_password) and submitted == admin_password
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         error = None
@@ -218,6 +226,8 @@ def register_routes(app):
             van = request.form.get("van_number", "").strip()
 
             error = validate_checkout_fields(employee, van)
+            if not error and not check_admin_password(request.form.get("admin_password")):
+                error = "Incorrect admin password."
             if error:
                 flash(error, "error")
                 return render_template("scan.html", tool=tool, manual=True, **pick_lists())
@@ -228,7 +238,7 @@ def register_routes(app):
 
         return render_template("scan.html", tool=tool, manual=True, **pick_lists())
 
-    @app.route("/tools/<int:tool_id>/manual-checkin", methods=["POST"])
+    @app.route("/tools/<int:tool_id>/manual-checkin", methods=["GET", "POST"])
     def manual_checkin(tool_id):
         """Admin-only override for when a tool's QR tag is lost/damaged."""
         redirect_response = require_admin()
@@ -238,10 +248,18 @@ def register_routes(app):
         tool = Tool.query.get_or_404(tool_id)
         if tool.status == "in_shop":
             flash(f"{tool.label} is already in the shop.", "error")
-        else:
+            return redirect(url_for("dashboard"))
+
+        if request.method == "POST":
+            if not check_admin_password(request.form.get("admin_password")):
+                flash("Incorrect admin password.", "error")
+                return render_template("manual_checkin.html", tool=tool)
+
             perform_checkin(tool, manual=True)
             flash(f"{tool.label} manually checked back in.", "success")
-        return redirect(url_for("dashboard"))
+            return redirect(url_for("dashboard"))
+
+        return render_template("manual_checkin.html", tool=tool)
 
     @app.route("/tools/<int:tool_id>/edit", methods=["GET", "POST"])
     def edit_checkout(tool_id):
@@ -261,6 +279,8 @@ def register_routes(app):
             van = request.form.get("van_number", "").strip()
 
             error = validate_checkout_fields(employee, van)
+            if not error and not check_admin_password(request.form.get("admin_password")):
+                error = "Incorrect admin password."
             if error:
                 flash(error, "error")
                 return render_template("edit_checkout.html", tool=tool, **pick_lists())

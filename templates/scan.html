@@ -26,6 +26,11 @@
         {% for van in vans %}<option value="{{ van }}">{% endfor %}
       </datalist>
 
+      {% if manual %}
+        <label for="admin_password">Admin password</label>
+        <input type="password" id="admin_password" name="admin_password" autocomplete="off" required>
+      {% endif %}
+
       <div class="form-actions">
         <button class="btn btn-out" type="submit">Check out {{ tool.label }}</button>
       </div>

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Manual check-in: {{ tool.label }}{% endblock %}
+{% block content %}
+  <h2>Manual check-in: {{ tool.label }}</h2>
+  <p class="flash flash-error">Admin manual override &mdash; this bypasses QR scanning.</p>
+
+  <p>Currently with <strong>{{ tool.current_employee }}</strong> &mdash; Van {{ tool.current_van }}</p>
+
+  <form method="post" class="form-card">
+    <label for="admin_password">Admin password</label>
+    <input type="password" id="admin_password" name="admin_password" autocomplete="off" required autofocus>
+
+    <div class="form-actions">
+      <button class="btn btn-in" type="submit">Check in {{ tool.label }}</button>
+      <a href="{{ url_for('dashboard') }}">Cancel</a>
+    </div>
+  </form>
+{% endblock %}
